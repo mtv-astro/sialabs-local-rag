@@ -4,7 +4,7 @@
 
 # SoberanIA Labs Local RAG
 
-Local-first retrieval-augmented generation application for private document Q&A with FastAPI, React, SQLite and local AI through Ollama/Gemma.
+Local-first retrieval-augmented generation application for chatting with private documents using FastAPI, React, SQLite and local AI through Ollama/Gemma.
 
 ## Overview
 
@@ -150,7 +150,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\seed-demo.ps1
 Suggested question:
 
 ~~~text
-How does SoberanIA Labs Local RAG keep document Q&A local?
+How does SoberanIA Labs Local RAG let you chat with private documents locally?
 ~~~
 
 ## Documentation
