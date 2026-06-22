@@ -78,6 +78,8 @@ const copy = {
     assistantLabel: 'Local assistant',
     thinking: 'Searching the local base and generating an answer…',
     sources: 'Retrieved sources',
+    sourceSingular: 'source',
+    sourcePlural: 'sources',
     techStatus: 'Local technical status',
     llm: 'LLM',
     embeddings: 'Embeddings',
@@ -141,6 +143,8 @@ const copy = {
     assistantLabel: 'Assistente local',
     thinking: 'Buscando na base local e gerando resposta…',
     sources: 'Fontes recuperadas',
+    sourceSingular: 'fonte',
+    sourcePlural: 'fontes',
     techStatus: 'Status técnico local',
     llm: 'LLM',
     embeddings: 'Embeddings',
@@ -161,24 +165,32 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-function buildContextualQuestion(messages: ChatMessage[], currentQuestion: string) {
+function buildContextualQuestion(messages: ChatMessage[], currentQuestion: string, language: Language) {
   const recentMessages = messages.slice(-6)
   if (recentMessages.length === 0) return currentQuestion
 
   const recentContext = recentMessages
     .map((message) => {
-      const label = message.role === 'user' ? 'User' : 'Assistant'
+      const label = message.role === 'user' ? (language === 'pt' ? 'Usuário' : 'User') : (language === 'pt' ? 'Assistente' : 'Assistant')
       return `${label}: ${message.content}`
     })
     .join('\n\n')
 
-  const contextualQuestion = [
-    'Recent conversation context:',
-    recentContext,
-    '',
-    'Current user question:',
-    currentQuestion,
-  ].join('\n')
+  const contextualQuestion = language === 'pt'
+    ? [
+        'Contexto recente da conversa:',
+        recentContext,
+        '',
+        'Pergunta atual do usuário:',
+        currentQuestion,
+      ].join('\n')
+    : [
+        'Recent conversation context:',
+        recentContext,
+        '',
+        'Current user question:',
+        currentQuestion,
+      ].join('\n')
 
   if (contextualQuestion.length <= 3800) return contextualQuestion
   return contextualQuestion.slice(contextualQuestion.length - 3800)
@@ -316,7 +328,9 @@ function App() {
     setError(null)
 
     try {
-      const response = await askQuestion(buildContextualQuestion(priorMessages, submittedQuestion))
+      const response = await askQuestion(
+        buildContextualQuestion(priorMessages, submittedQuestion, language),
+      )
       const assistantMessage: ChatMessage = {
         id: createMessageId(),
         role: 'assistant',
@@ -545,11 +559,19 @@ function App() {
                 )}
                 <p>{message.content}</p>
                 {message.response && (
-                  <div className="sources-block">
-                    <h3>{t.sources as string}</h3>
+                  <details className="sources-block">
+                    <summary>
+                      <span>{t.sources as string}</span>
+                      <span className="sources-count">
+                        {message.response.sources.length}{' '}
+                        {message.response.sources.length === 1
+                          ? (t.sourceSingular as string)
+                          : (t.sourcePlural as string)}
+                      </span>
+                    </summary>
                     <div className="sources">
                       {message.response.sources.map((source) => (
-                        <details key={`${message.id}-${source.chunk_id}`}>
+                        <details className="source-detail" key={`${message.id}-${source.chunk_id}`}>
                           <summary>
                             {source.document_title} · chunk {source.chunk_index} · score {source.score}
                           </summary>
@@ -557,7 +579,7 @@ function App() {
                         </details>
                       ))}
                     </div>
-                  </div>
+                  </details>
                 )}
               </article>
             ))}
