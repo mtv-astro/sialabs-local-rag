@@ -12,6 +12,12 @@ import type { ChatResponse, DocumentRecord, PublicConfig } from './types'
 
 type Language = 'en' | 'pt'
 type Theme = 'light' | 'dark'
+type ChatMessage = {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  response?: ChatResponse
+}
 
 const sampleDocuments: Record<Language, string> = {
   en: `SoberanIA Labs Local RAG is a local-first application for chatting with private documents.
@@ -62,9 +68,15 @@ const copy = {
     removeFromBase: 'Remove from base',
     chatRag: 'RAG chat',
     chatWithBase: 'Chat with the base',
-    chatReady: 'Ask about indexed documents and inspect the retrieved sources.',
+    chatReady: 'Ask follow-up questions and inspect the sources used in each answer.',
     chatBlocked: 'Add documents before chatting with the base.',
-    askBase: 'Chat with the base',
+    askBase: 'Send message',
+    clearChat: 'Clear chat',
+    emptyChatTitle: 'No messages yet.',
+    emptyChatText: 'Ask a question to start a local conversation with your documents.',
+    userLabel: 'You',
+    assistantLabel: 'Local assistant',
+    thinking: 'Searching the local base and generating an answer…',
     sources: 'Retrieved sources',
     techStatus: 'Local technical status',
     llm: 'LLM',
@@ -119,9 +131,15 @@ const copy = {
     removeFromBase: 'Remover da base',
     chatRag: 'Chat RAG',
     chatWithBase: 'Converse com a base',
-    chatReady: 'Pergunte sobre os documentos indexados e confira as fontes usadas.',
+    chatReady: 'Faça perguntas de continuidade e confira as fontes usadas em cada resposta.',
     chatBlocked: 'Adicione documentos antes de conversar com a base.',
-    askBase: 'Conversar com a base',
+    askBase: 'Enviar mensagem',
+    clearChat: 'Limpar chat',
+    emptyChatTitle: 'Nenhuma mensagem ainda.',
+    emptyChatText: 'Faça uma pergunta para iniciar uma conversa local com seus documentos.',
+    userLabel: 'Você',
+    assistantLabel: 'Assistente local',
+    thinking: 'Buscando na base local e gerando resposta…',
     sources: 'Fontes recuperadas',
     techStatus: 'Status técnico local',
     llm: 'LLM',
@@ -139,6 +157,33 @@ const copy = {
   },
 } satisfies Record<Language, Record<string, unknown>>
 
+function createMessageId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function buildContextualQuestion(messages: ChatMessage[], currentQuestion: string) {
+  const recentMessages = messages.slice(-6)
+  if (recentMessages.length === 0) return currentQuestion
+
+  const recentContext = recentMessages
+    .map((message) => {
+      const label = message.role === 'user' ? 'User' : 'Assistant'
+      return `${label}: ${message.content}`
+    })
+    .join('\n\n')
+
+  const contextualQuestion = [
+    'Recent conversation context:',
+    recentContext,
+    '',
+    'Current user question:',
+    currentQuestion,
+  ].join('\n')
+
+  if (contextualQuestion.length <= 3800) return contextualQuestion
+  return contextualQuestion.slice(contextualQuestion.length - 3800)
+}
+
 function App() {
   const [language, setLanguage] = useState<Language>('en')
   const [theme, setTheme] = useState<Theme>('light')
@@ -147,13 +192,14 @@ function App() {
   const [title, setTitle] = useState(copy.en.defaultTitle as string)
   const [content, setContent] = useState(sampleDocuments.en)
   const [question, setQuestion] = useState(copy.en.defaultQuestion as string)
-  const [chatResponse, setChatResponse] = useState<ChatResponse | null>(null)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const t = copy[language]
   const hasDocuments = documents.length > 0
+  const hasChatMessages = chatMessages.length > 0
 
   const totalChunks = useMemo(
     () => documents.reduce((sum, document) => sum + document.total_chunks, 0),
@@ -255,13 +301,32 @@ function App() {
 
   async function handleAskQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const submittedQuestion = question.trim()
+    if (submittedQuestion.length < 3) return
+
+    const userMessage: ChatMessage = {
+      id: createMessageId(),
+      role: 'user',
+      content: submittedQuestion,
+    }
+    const priorMessages = chatMessages
+    setChatMessages((currentMessages) => [...currentMessages, userMessage])
+    setQuestion('')
     setIsLoading(true)
     setError(null)
+
     try {
-      const response = await askQuestion(question)
-      setChatResponse(response)
+      const response = await askQuestion(buildContextualQuestion(priorMessages, submittedQuestion))
+      const assistantMessage: ChatMessage = {
+        id: createMessageId(),
+        role: 'assistant',
+        content: response.answer,
+        response,
+      }
+      setChatMessages((currentMessages) => [...currentMessages, assistantMessage])
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : (t.chatError as string))
+      setQuestion(submittedQuestion)
     } finally {
       setIsLoading(false)
     }
@@ -443,11 +508,68 @@ function App() {
         </section>
 
         <section className="card stack chat-card">
-          <div>
-            <p className="eyebrow">{t.chatRag as string}</p>
-            <h2>{t.chatWithBase as string}</h2>
-            <p className="muted">{hasDocuments ? (t.chatReady as string) : (t.chatBlocked as string)}</p>
+          <div className="chat-heading">
+            <div>
+              <p className="eyebrow">{t.chatRag as string}</p>
+              <h2>{t.chatWithBase as string}</h2>
+              <p className="muted">
+                {hasDocuments ? (t.chatReady as string) : (t.chatBlocked as string)}
+              </p>
+            </div>
+            {hasChatMessages && (
+              <button className="ghost" onClick={() => setChatMessages([])} type="button">
+                {t.clearChat as string}
+              </button>
+            )}
           </div>
+
+          <div className="conversation-log" aria-live="polite">
+            {!hasChatMessages && !isLoading && (
+              <div className="conversation-empty">
+                <strong>{t.emptyChatTitle as string}</strong>
+                <p>{t.emptyChatText as string}</p>
+              </div>
+            )}
+
+            {chatMessages.map((message) => (
+              <article className={`chat-message ${message.role}`} key={message.id}>
+                <span className="message-label">
+                  {message.role === 'user' ? (t.userLabel as string) : (t.assistantLabel as string)}
+                </span>
+                {message.response && (
+                  <div className="answer-meta">
+                    <span>{message.response.provider}</span>
+                    <span>{message.response.model}</span>
+                    <span>{message.response.latency_ms} ms</span>
+                  </div>
+                )}
+                <p>{message.content}</p>
+                {message.response && (
+                  <div className="sources-block">
+                    <h3>{t.sources as string}</h3>
+                    <div className="sources">
+                      {message.response.sources.map((source) => (
+                        <details key={`${message.id}-${source.chunk_id}`}>
+                          <summary>
+                            {source.document_title} · chunk {source.chunk_index} · score {source.score}
+                          </summary>
+                          <p>{source.content}</p>
+                        </details>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </article>
+            ))}
+
+            {isLoading && (
+              <article className="chat-message assistant pending">
+                <span className="message-label">{t.assistantLabel as string}</span>
+                <p>{t.thinking as string}</p>
+              </article>
+            )}
+          </div>
+
           <form className="chat-form" onSubmit={handleAskQuestion}>
             <textarea
               value={question}
@@ -458,28 +580,6 @@ function App() {
               {t.askBase as string}
             </button>
           </form>
-
-          {chatResponse && (
-            <article className="answer-box">
-              <div className="answer-meta">
-                <span>{chatResponse.provider}</span>
-                <span>{chatResponse.model}</span>
-                <span>{chatResponse.latency_ms} ms</span>
-              </div>
-              <p>{chatResponse.answer}</p>
-              <h3>{t.sources as string}</h3>
-              <div className="sources">
-                {chatResponse.sources.map((source) => (
-                  <details key={source.chunk_id}>
-                    <summary>
-                      {source.document_title} · chunk {source.chunk_index} · score {source.score}
-                    </summary>
-                    <p>{source.content}</p>
-                  </details>
-                ))}
-              </div>
-            </article>
-          )}
         </section>
       </section>
 
