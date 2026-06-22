@@ -181,11 +181,11 @@ p {
 }
 
 h1 {
-  font-size: clamp(2.25rem, 5vw, 4.1rem);
+  font-size: clamp(2.15rem, 4.6vw, 3.85rem);
   letter-spacing: -0.06em;
   line-height: 0.95;
   margin-bottom: 1rem;
-  max-width: 780px;
+  max-width: 880px;
 }
 
 h2 {
@@ -393,9 +393,10 @@ h3 {
 }
 
 .upload-card button {
-  justify-self: start;
-  min-width: 190px;
-  padding-inline: 1.35rem;
+  justify-self: stretch;
+  min-width: 0;
+  padding-block: 0.58rem;
+  padding-inline: 1.15rem;
 }
 
 .section-heading {
@@ -596,9 +597,5 @@ summary {
 
   .metric-grid {
     grid-template-columns: 1fr;
-  }
-
-  .upload-card button {
-    justify-self: stretch;
   }
 }
