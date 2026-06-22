@@ -331,6 +331,10 @@ h3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.workspace-grid {
+  align-items: start;
+}
+
 .stack {
   display: grid;
   gap: 1rem;
@@ -483,7 +487,12 @@ h3 {
 }
 
 .chat-card {
+  align-self: start;
   border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.base-card {
+  align-self: start;
 }
 
 .chat-form {
@@ -496,6 +505,8 @@ h3 {
   border-radius: 18px;
   display: grid;
   gap: 1rem;
+  max-height: min(760px, 72vh);
+  overflow: auto;
   padding: 1rem;
 }
 
@@ -509,6 +520,9 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .answer-meta span {
@@ -597,5 +611,9 @@ summary {
 
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .answer-box {
+    max-height: none;
   }
 }
