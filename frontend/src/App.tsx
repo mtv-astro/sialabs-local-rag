@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { FormEvent, KeyboardEvent } from 'react'
 
 import {
   askQuestion,
@@ -18,6 +19,8 @@ type ChatMessage = {
   content: string
   response?: ChatResponse
 }
+
+const CHAT_HISTORY_STORAGE_KEY = 'sialabs-local-rag-chat-history-v1'
 
 const sampleDocuments: Record<Language, string> = {
   en: `SoberanIA Labs Local RAG is a local-first application for chatting with private documents.
@@ -165,6 +168,32 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
+function isChatMessage(value: unknown): value is ChatMessage {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<ChatMessage>
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.content === 'string' &&
+    (candidate.role === 'user' || candidate.role === 'assistant')
+  )
+}
+
+function readPersistedChatMessages(): ChatMessage[] {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const storedMessages = window.localStorage.getItem(CHAT_HISTORY_STORAGE_KEY)
+    if (!storedMessages) return []
+
+    const parsed = JSON.parse(storedMessages) as unknown
+    if (!Array.isArray(parsed)) return []
+
+    return parsed.filter(isChatMessage)
+  } catch {
+    return []
+  }
+}
+
 function buildContextualQuestion(messages: ChatMessage[], currentQuestion: string, language: Language) {
   const recentMessages = messages.slice(-6)
   if (recentMessages.length === 0) return currentQuestion
@@ -204,7 +233,7 @@ function App() {
   const [title, setTitle] = useState(copy.en.defaultTitle as string)
   const [content, setContent] = useState(sampleDocuments.en)
   const [question, setQuestion] = useState(copy.en.defaultQuestion as string)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(readPersistedChatMessages)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -227,6 +256,18 @@ function App() {
     document.documentElement.dataset.theme = theme
     document.documentElement.lang = language
   }, [language, theme])
+
+  useEffect(() => {
+    try {
+      if (chatMessages.length === 0) {
+        window.localStorage.removeItem(CHAT_HISTORY_STORAGE_KEY)
+        return
+      }
+      window.localStorage.setItem(CHAT_HISTORY_STORAGE_KEY, JSON.stringify(chatMessages))
+    } catch {
+      // Local storage can be unavailable in restricted browser contexts.
+    }
+  }, [chatMessages])
 
   const statusLabel = useMemo(() => {
     if (!config) return t.connecting as string
@@ -311,10 +352,9 @@ function App() {
     }
   }
 
-  async function handleAskQuestion(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function submitQuestion() {
     const submittedQuestion = question.trim()
-    if (submittedQuestion.length < 3) return
+    if (submittedQuestion.length < 3 || isLoading || !hasDocuments) return
 
     const userMessage: ChatMessage = {
       id: createMessageId(),
@@ -344,6 +384,17 @@ function App() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  function handleAskQuestion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    void submitQuestion()
+  }
+
+  function handleQuestionKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== 'Enter' || event.shiftKey) return
+    event.preventDefault()
+    void submitQuestion()
   }
 
   async function handleDeleteDocument(documentId: string) {
@@ -596,6 +647,7 @@ function App() {
             <textarea
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
+              onKeyDown={handleQuestionKeyDown}
               rows={4}
             />
             <button disabled={isLoading || !hasDocuments || question.trim().length < 3}>
