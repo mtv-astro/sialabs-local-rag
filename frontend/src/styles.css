@@ -495,34 +495,86 @@ h3 {
   align-self: start;
 }
 
+.chat-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
 .chat-form {
   display: grid;
   gap: 0.75rem;
 }
 
-.answer-box {
-  background: var(--soft);
-  border-radius: 18px;
+.conversation-log {
   display: grid;
-  gap: 1rem;
+  gap: 0.8rem;
   max-height: min(760px, 72vh);
   overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.conversation-empty {
+  background: var(--soft);
+  border: 1px dashed var(--field-border);
+  border-radius: 18px;
   padding: 1rem;
 }
 
-.answer-box > p {
-  line-height: 1.6;
+.conversation-empty p {
+  color: var(--muted);
+  margin: 0.35rem 0 0;
+}
+
+.chat-message {
+  border-radius: 20px;
+  display: grid;
+  gap: 0.75rem;
+  line-height: 1.55;
+  padding: 1rem;
+}
+
+.chat-message p {
   margin-bottom: 0;
   white-space: pre-wrap;
+}
+
+.chat-message.user {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  justify-self: end;
+  max-width: 86%;
+}
+
+.chat-message.assistant {
+  background: var(--soft);
+  justify-self: start;
+  width: 100%;
+}
+
+.chat-message.pending {
+  opacity: 0.82;
+}
+
+.message-label {
+  color: inherit;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  opacity: 0.72;
+  text-transform: uppercase;
+}
+
+.sources-block {
+  display: grid;
+  gap: 0.65rem;
 }
 
 .answer-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  position: sticky;
-  top: 0;
-  z-index: 1;
 }
 
 .answer-meta span {
@@ -578,7 +630,8 @@ summary {
 
 @media (max-width: 860px) {
   .hero,
-  .document-item {
+  .document-item,
+  .chat-heading {
     align-items: stretch;
     flex-direction: column;
   }
@@ -613,7 +666,11 @@ summary {
     grid-template-columns: 1fr;
   }
 
-  .answer-box {
+  .conversation-log {
     max-height: none;
+  }
+
+  .chat-message.user {
+    max-width: 100%;
   }
 }
