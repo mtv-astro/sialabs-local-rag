@@ -48,10 +48,11 @@ const copy = {
     stepThreeTitle: 'Chat with the base',
     stepThreeText: 'Answers show sources, score, model and latency.',
     quickEntry: 'Quick entry',
-    addText: 'Add text',
-    addTextHelp: 'Paste a passage and turn it into a searchable source.',
+    addText: 'Paste text document',
+    addTextHelp: 'Paste the full document content and turn it into a searchable source.',
     title: 'Title',
-    content: 'Content',
+    content: 'Paste your document content',
+    contentPlaceholder: 'Paste your document content here...',
     addToBase: 'Add to base',
     uploadLocal: 'Local upload',
     addFile: 'Add file',
@@ -113,10 +114,11 @@ const copy = {
     stepThreeTitle: 'Converse com a base',
     stepThreeText: 'As respostas mostram fontes, score, modelo e latência.',
     quickEntry: 'Entrada rápida',
-    addText: 'Adicionar texto',
-    addTextHelp: 'Cole um trecho e transforme em fonte consultável.',
+    addText: 'Colar documento em texto',
+    addTextHelp: 'Cole o conteúdo completo do documento e transforme em fonte consultável.',
     title: 'Título',
-    content: 'Conteúdo',
+    content: 'Cole o conteúdo do documento',
+    contentPlaceholder: 'Cole aqui o conteúdo do documento...',
     addToBase: 'Adicionar à base',
     uploadLocal: 'Upload local',
     addFile: 'Adicionar arquivo',
@@ -471,108 +473,119 @@ function App() {
       {error && <div className="alert">{error}</div>}
 
       <section className="grid two-columns ingest-grid">
-        <form className="card stack" onSubmit={handleCreateDocument}>
-          <div>
-            <p className="eyebrow">{t.quickEntry as string}</p>
-            <h2>{t.addText as string}</h2>
+        <details className="card stack toggle-card" open>
+          <summary className="toggle-summary">
+            <span>
+              <span className="eyebrow">{t.quickEntry as string}</span>
+              <strong>{t.addText as string}</strong>
+            </span>
+          </summary>
+          <form className="stack toggle-content" onSubmit={handleCreateDocument}>
             <p className="muted">{t.addTextHelp as string}</p>
-          </div>
-          <label>
-            {t.title as string}
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            {t.content as string}
-            <textarea
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              rows={9}
-            />
-          </label>
-          <button disabled={isLoading || title.trim().length === 0 || content.trim().length < 10}>
-            {t.addToBase as string}
-          </button>
-        </form>
+            <label>
+              {t.title as string}
+              <input value={title} onChange={(event) => setTitle(event.target.value)} />
+            </label>
+            <label>
+              {t.content as string}
+              <textarea
+                placeholder={t.contentPlaceholder as string}
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
+                rows={9}
+              />
+            </label>
+            <button disabled={isLoading || title.trim().length === 0 || content.trim().length < 10}>
+              {t.addToBase as string}
+            </button>
+          </form>
+        </details>
 
-        <form className="card stack upload-card" onSubmit={handleUploadDocument}>
-          <div>
-            <p className="eyebrow">{t.uploadLocal as string}</p>
-            <h2>{t.addFile as string}</h2>
+        <details className="card stack toggle-card">
+          <summary className="toggle-summary">
+            <span>
+              <span className="eyebrow">{t.uploadLocal as string}</span>
+              <strong>{t.addFile as string}</strong>
+            </span>
+          </summary>
+          <form className="stack toggle-content upload-card" onSubmit={handleUploadDocument}>
             <p className="muted">{t.addFileHelp as string}</p>
-          </div>
-          <label className="upload-dropzone">
-            <span>{selectedFile ? selectedFile.name : (t.chooseLocalFile as string)}</span>
-            <small>
-              {selectedFile
-                ? (t.fileReady as (kb: number) => string)(Math.ceil(selectedFile.size / 1024))
-                : (t.fileHint as string)}
-            </small>
-            <input
-              type="file"
-              accept=".txt,.md,.markdown,.pdf"
-              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-            />
-          </label>
-          <p className="muted">{t.pdfBoundary as string}</p>
-          <button disabled={isLoading || !selectedFile}>{t.addFileToBase as string}</button>
-        </form>
+            <label className="upload-dropzone">
+              <span>{selectedFile ? selectedFile.name : (t.chooseLocalFile as string)}</span>
+              <small>
+                {selectedFile
+                  ? (t.fileReady as (kb: number) => string)(Math.ceil(selectedFile.size / 1024))
+                  : (t.fileHint as string)}
+              </small>
+              <input
+                type="file"
+                accept=".txt,.md,.markdown,.pdf"
+                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              />
+            </label>
+            <p className="muted">{t.pdfBoundary as string}</p>
+            <button disabled={isLoading || !selectedFile}>{t.addFileToBase as string}</button>
+          </form>
+        </details>
       </section>
 
-      <section className="grid two-columns workspace-grid">
-        <section className="card stack base-card">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">{t.localBase as string}</p>
-              <h2>{t.indexedDocs as string}</h2>
+      <section className="grid workspace-grid">
+        <details className="card stack base-card toggle-card" open>
+          <summary className="toggle-summary">
+            <span>
+              <span className="eyebrow">{t.localBase as string}</span>
+              <strong>{t.indexedDocs as string}</strong>
+            </span>
+            <span className="summary-pill">{documents.length}</span>
+          </summary>
+
+          <div className="stack toggle-content">
+            <div className="metric-grid">
+              <div>
+                <span>{t.documents as string}</span>
+                <strong>{documents.length}</strong>
+              </div>
+              <div>
+                <span>{t.chunks as string}</span>
+                <strong>{totalChunks}</strong>
+              </div>
+              <div>
+                <span>{t.characters as string}</span>
+                <strong>{totalCharacters.toLocaleString(language === 'pt' ? 'pt-BR' : 'en-US')}</strong>
+              </div>
             </div>
-            <strong>{documents.length}</strong>
+
+            {!hasDocuments && (
+              <div className="empty-state">
+                <strong>{t.emptyTitle as string}</strong>
+                <p>{t.emptyText as string}</p>
+              </div>
+            )}
+
+            <div className="document-list">
+              {documents.map((document) => (
+                <article className="document-item" key={document.id}>
+                  <div>
+                    <h3>{document.title}</h3>
+                    <p>
+                      {document.total_chunks} chunks · {document.total_chars} chars ·{' '}
+                      {document.source_type}
+                    </p>
+                  </div>
+                  <button
+                    className="secondary"
+                    onClick={() => void handleDeleteDocument(document.id)}
+                    type="button"
+                  >
+                    {t.removeFromBase as string}
+                  </button>
+                </article>
+              ))}
+            </div>
           </div>
+        </details>
 
-          <div className="metric-grid">
-            <div>
-              <span>{t.documents as string}</span>
-              <strong>{documents.length}</strong>
-            </div>
-            <div>
-              <span>{t.chunks as string}</span>
-              <strong>{totalChunks}</strong>
-            </div>
-            <div>
-              <span>{t.characters as string}</span>
-              <strong>{totalCharacters.toLocaleString(language === 'pt' ? 'pt-BR' : 'en-US')}</strong>
-            </div>
-          </div>
-
-          {!hasDocuments && (
-            <div className="empty-state">
-              <strong>{t.emptyTitle as string}</strong>
-              <p>{t.emptyText as string}</p>
-            </div>
-          )}
-
-          <div className="document-list">
-            {documents.map((document) => (
-              <article className="document-item" key={document.id}>
-                <div>
-                  <h3>{document.title}</h3>
-                  <p>
-                    {document.total_chunks} chunks · {document.total_chars} chars ·{' '}
-                    {document.source_type}
-                  </p>
-                </div>
-                <button
-                  className="secondary"
-                  onClick={() => void handleDeleteDocument(document.id)}
-                  type="button"
-                >
-                  {t.removeFromBase as string}
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="card stack chat-card">
+        <section className="card stack chat-card primary-chat-card">
           <div className="chat-heading">
             <div>
               <p className="eyebrow">{t.chatRag as string}</p>
