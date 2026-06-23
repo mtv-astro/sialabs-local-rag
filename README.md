@@ -73,7 +73,6 @@ Prerequisites and additional options are documented in [`docs/LOCAL_SETUP.md`](d
 Terminal 1 — backend:
 
 ~~~powershell
-cd C:\Users\carlo\dev\sialabs-local-rag
 cd backend
 uv sync --dev
 uv run uvicorn sialabs_local_rag.main:app --reload --host 0.0.0.0 --port 8000
@@ -82,7 +81,6 @@ uv run uvicorn sialabs_local_rag.main:app --reload --host 0.0.0.0 --port 8000
 Terminal 2 — frontend:
 
 ~~~powershell
-cd C:\Users\carlo\dev\sialabs-local-rag
 cd frontend
 npm ci
 npm run dev
@@ -107,7 +105,6 @@ ollama pull embeddinggemma
 Configure the backend for local AI:
 
 ~~~powershell
-cd C:\Users\carlo\dev\sialabs-local-rag
 $env:LLM_PROVIDER = "ollama"
 $env:EMBEDDING_PROVIDER = "ollama"
 $env:OLLAMA_BASE_URL = "http://localhost:11434"
@@ -121,7 +118,6 @@ uv run uvicorn sialabs_local_rag.main:app --reload --host 0.0.0.0 --port 8000
 Run a direct model availability and smoke check:
 
 ~~~powershell
-cd C:\Users\carlo\dev\sialabs-local-rag
 powershell -ExecutionPolicy Bypass -File .\scripts\check-ollama.ps1 -RunSmokeRequests
 ~~~
 
@@ -149,7 +145,6 @@ This mode validates the application pipeline deterministically. It is not semant
 Seed reproducible demo content with:
 
 ~~~powershell
-cd C:\Users\carlo\dev\sialabs-local-rag
 powershell -ExecutionPolicy Bypass -File .\scripts\seed-demo.ps1
 ~~~
 
@@ -166,7 +161,6 @@ The frontend can be installed as a PWA app shell on supported browsers. This ins
 Build and preview the frontend shell:
 
 ~~~powershell
-cd C:\Users\carlo\dev\sialabs-local-rag
 cd frontend
 npm run build
 npm run preview -- --host 0.0.0.0
@@ -196,7 +190,6 @@ If the backend is stopped, the installed app displays an actionable local API un
 Run the complete local validation suite:
 
 ~~~powershell
-cd C:\Users\carlo\dev\sialabs-local-rag
 powershell -ExecutionPolicy Bypass -File .\scripts\validate-local.ps1
 ~~~
 
