@@ -1,54 +1,79 @@
 .action-card {
-  align-self: start;
-  min-height: 196px;
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 118px;
+  padding-block: 1rem;
 }
 
+.action-card-copy {
+  min-width: 0;
+}
+
+.action-card-copy h2 {
+  margin-bottom: 0.35rem;
+}
+
+.action-card-copy .eyebrow {
+  margin-bottom: 0.35rem;
+}
+
+.action-card-copy .muted {
+  max-width: 46ch;
+}
+
+.action-button,
 .action-card > button,
 .upload-card > button {
-  justify-self: start;
-  min-width: 9rem;
-  width: auto;
-}
-
-.compact-file-picker {
-  background: var(--soft);
-  border: 1px dashed var(--field-border);
-  border-radius: 16px;
-  color: var(--accent);
+  align-items: center;
+  align-self: center;
+  background: var(--accent);
+  border: 0;
+  border-radius: 999px;
+  color: var(--accent-contrast);
   cursor: pointer;
-  padding: 0.9rem 1rem;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease,
-    transform 120ms ease;
+  display: inline-flex;
+  font-weight: 800;
+  justify-content: center;
+  justify-self: end;
+  min-height: 2.75rem;
+  min-width: 10.5rem;
+  padding: 0.72rem 1rem;
+  white-space: nowrap;
+  width: 10.5rem;
 }
 
-.compact-file-picker:hover {
-  background: var(--soft-strong);
-  border-color: var(--gold);
+.action-button:hover,
+.action-card > button:hover:not(:disabled),
+.upload-card > button:hover:not(:disabled) {
+  background: var(--accent-strong);
   transform: translateY(-1px);
 }
 
-.compact-file-picker span {
-  display: block;
-  font-weight: 900;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.action-button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
-.compact-file-picker small {
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.compact-file-picker input {
+.action-button input,
+.file-action-button input {
   height: 1px;
   opacity: 0;
   overflow: hidden;
   padding: 0;
   position: absolute;
   width: 1px;
+}
+
+.selected-file-meta {
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 900;
+  margin: 0.35rem 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drop-overlay {
@@ -147,6 +172,12 @@
   grid-template-columns: 1fr;
 }
 
+.document-list-scroll {
+  max-height: 17rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
 .primary-chat-card {
   min-height: min(860px, 82vh);
 }
@@ -201,6 +232,17 @@
 }
 
 @media (max-width: 860px) {
+  .action-card {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .action-button,
+  .action-card > button,
+  .upload-card > button {
+    justify-self: start;
+  }
+
   .toggle-summary {
     align-items: flex-start;
   }
