@@ -48,19 +48,24 @@ const copy = {
     stepThreeTitle: 'Chat with the base',
     stepThreeText: 'Answers show sources, score, model and latency.',
     quickEntry: 'Quick entry',
-    addText: 'Add text',
-    addTextHelp: 'Paste a passage and turn it into a searchable source.',
+    addText: 'Paste text document',
+    addTextHelp: 'Paste a full document into the local base.',
+    pasteDocument: 'Paste document',
+    pasteModalTitle: 'Paste your document content',
     title: 'Title',
-    content: 'Content',
+    content: 'Paste your document content',
+    contentPlaceholder: 'Paste your document content here...',
     addToBase: 'Add to base',
+    cancel: 'Cancel',
     uploadLocal: 'Local upload',
     addFile: 'Add file',
-    addFileHelp: 'Use TXT, Markdown or selectable-text PDF.',
-    chooseLocalFile: 'Choose local file',
-    fileReady: (kb: number) => `${kb} KB ready to index`,
-    fileHint: 'Select a file from your system.',
+    addFileHelp: 'Choose a file or drag one anywhere into the app window.',
+    chooseLocalFile: 'Choose file',
+    fileReady: (kb: number) => `${kb} KB ready to add`,
+    fileHint: 'TXT, Markdown or selectable-text PDF.',
+    dropFile: 'Drop file to add it',
     pdfBoundary: 'Scanned PDFs/OCR are out of scope. Content stays in the local base.',
-    addFileToBase: 'Add file to base',
+    addFileToBase: 'Add file',
     localBase: 'Local base',
     indexedDocs: 'Indexed documents',
     documents: 'Documents',
@@ -73,7 +78,7 @@ const copy = {
     chatWithBase: 'Chat with the base',
     chatReady: 'Ask follow-up questions and inspect the sources used in each answer.',
     chatBlocked: 'Add documents before chatting with the base.',
-    askBase: 'Send message',
+    askBase: 'Send',
     clearChat: 'Clear chat',
     emptyChatTitle: 'No messages yet.',
     emptyChatText: 'Ask a question to start a local conversation with your documents.',
@@ -113,17 +118,22 @@ const copy = {
     stepThreeTitle: 'Converse com a base',
     stepThreeText: 'As respostas mostram fontes, score, modelo e latência.',
     quickEntry: 'Entrada rápida',
-    addText: 'Adicionar texto',
-    addTextHelp: 'Cole um trecho e transforme em fonte consultável.',
+    addText: 'Colar documento em texto',
+    addTextHelp: 'Cole um documento completo na base local.',
+    pasteDocument: 'Colar documento',
+    pasteModalTitle: 'Cole o conteúdo do documento',
     title: 'Título',
-    content: 'Conteúdo',
+    content: 'Cole o conteúdo do documento',
+    contentPlaceholder: 'Cole aqui o conteúdo do documento...',
     addToBase: 'Adicionar à base',
+    cancel: 'Cancelar',
     uploadLocal: 'Upload local',
     addFile: 'Adicionar arquivo',
-    addFileHelp: 'Use TXT, Markdown ou PDF com texto selecionável.',
-    chooseLocalFile: 'Escolher arquivo local',
-    fileReady: (kb: number) => `${kb} KB prontos para indexar`,
-    fileHint: 'Selecione um arquivo do seu sistema.',
+    addFileHelp: 'Escolha um arquivo ou arraste para qualquer lugar da janela.',
+    chooseLocalFile: 'Escolher arquivo',
+    fileReady: (kb: number) => `${kb} KB prontos para adicionar`,
+    fileHint: 'TXT, Markdown ou PDF com texto selecionável.',
+    dropFile: 'Solte o arquivo para adicionar',
     pdfBoundary: 'PDFs escaneados/OCR ficam fora do escopo. O conteúdo permanece na base local.',
     addFileToBase: 'Adicionar arquivo',
     localBase: 'Base local',
@@ -138,7 +148,7 @@ const copy = {
     chatWithBase: 'Converse com a base',
     chatReady: 'Faça perguntas de continuidade e confira as fontes usadas em cada resposta.',
     chatBlocked: 'Adicione documentos antes de conversar com a base.',
-    askBase: 'Enviar mensagem',
+    askBase: 'Enviar',
     clearChat: 'Limpar chat',
     emptyChatTitle: 'Nenhuma mensagem ainda.',
     emptyChatText: 'Faça uma pergunta para iniciar uma conversa local com seus documentos.',
@@ -200,29 +210,41 @@ function buildContextualQuestion(messages: ChatMessage[], currentQuestion: strin
 
   const recentContext = recentMessages
     .map((message) => {
-      const label = message.role === 'user' ? (language === 'pt' ? 'Usuário' : 'User') : (language === 'pt' ? 'Assistente' : 'Assistant')
+      const label =
+        message.role === 'user'
+          ? language === 'pt'
+            ? 'Usuário'
+            : 'User'
+          : language === 'pt'
+            ? 'Assistente'
+            : 'Assistant'
       return `${label}: ${message.content}`
     })
     .join('\n\n')
 
-  const contextualQuestion = language === 'pt'
-    ? [
-        'Contexto recente da conversa:',
-        recentContext,
-        '',
-        'Pergunta atual do usuário:',
-        currentQuestion,
-      ].join('\n')
-    : [
-        'Recent conversation context:',
-        recentContext,
-        '',
-        'Current user question:',
-        currentQuestion,
-      ].join('\n')
+  const contextualQuestion =
+    language === 'pt'
+      ? [
+          'Contexto recente da conversa:',
+          recentContext,
+          '',
+          'Pergunta atual do usuário:',
+          currentQuestion,
+        ].join('\n')
+      : [
+          'Recent conversation context:',
+          recentContext,
+          '',
+          'Current user question:',
+          currentQuestion,
+        ].join('\n')
 
   if (contextualQuestion.length <= 3800) return contextualQuestion
   return contextualQuestion.slice(contextualQuestion.length - 3800)
+}
+
+function isFileDrag(event: DragEvent) {
+  return Array.from(event.dataTransfer?.types ?? []).includes('Files')
 }
 
 function App() {
@@ -235,6 +257,8 @@ function App() {
   const [question, setQuestion] = useState(copy.en.defaultQuestion as string)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(readPersistedChatMessages)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isPasteModalOpen, setIsPasteModalOpen] = useState(false)
+  const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -256,6 +280,51 @@ function App() {
     document.documentElement.dataset.theme = theme
     document.documentElement.lang = language
   }, [language, theme])
+
+  useEffect(() => {
+    let dragDepth = 0
+
+    function handleDragEnter(event: DragEvent) {
+      if (!isFileDrag(event)) return
+      event.preventDefault()
+      dragDepth += 1
+      setIsDraggingFile(true)
+    }
+
+    function handleDragOver(event: DragEvent) {
+      if (!isFileDrag(event)) return
+      event.preventDefault()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+    }
+
+    function handleDragLeave(event: DragEvent) {
+      if (!isFileDrag(event)) return
+      event.preventDefault()
+      dragDepth = Math.max(0, dragDepth - 1)
+      if (dragDepth === 0) setIsDraggingFile(false)
+    }
+
+    function handleDrop(event: DragEvent) {
+      if (!isFileDrag(event)) return
+      event.preventDefault()
+      dragDepth = 0
+      setIsDraggingFile(false)
+      const droppedFile = event.dataTransfer?.files?.[0]
+      if (droppedFile) setSelectedFile(droppedFile)
+    }
+
+    window.addEventListener('dragenter', handleDragEnter)
+    window.addEventListener('dragover', handleDragOver)
+    window.addEventListener('dragleave', handleDragLeave)
+    window.addEventListener('drop', handleDrop)
+
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter)
+      window.removeEventListener('dragover', handleDragOver)
+      window.removeEventListener('dragleave', handleDragLeave)
+      window.removeEventListener('drop', handleDrop)
+    }
+  }, [])
 
   useEffect(() => {
     try {
@@ -328,6 +397,7 @@ function App() {
     try {
       await createDocument({ title, content })
       setContent('')
+      setIsPasteModalOpen(false)
       await refreshDocuments()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : (t.createError as string))
@@ -412,6 +482,8 @@ function App() {
 
   return (
     <main className="app-shell" data-theme={theme}>
+      {isDraggingFile && <div className="drop-overlay">{t.dropFile as string}</div>}
+
       <section className="hero card">
         <div>
           <p className="eyebrow">SoberanIA Labs</p>
@@ -471,108 +543,98 @@ function App() {
       {error && <div className="alert">{error}</div>}
 
       <section className="grid two-columns ingest-grid">
-        <form className="card stack" onSubmit={handleCreateDocument}>
-          <div>
+        <section className="card action-card">
+          <div className="action-card-copy">
             <p className="eyebrow">{t.quickEntry as string}</p>
             <h2>{t.addText as string}</h2>
             <p className="muted">{t.addTextHelp as string}</p>
           </div>
-          <label>
-            {t.title as string}
-            <input value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <label>
-            {t.content as string}
-            <textarea
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              rows={9}
-            />
-          </label>
-          <button disabled={isLoading || title.trim().length === 0 || content.trim().length < 10}>
-            {t.addToBase as string}
+          <button className="action-button" onClick={() => setIsPasteModalOpen(true)} type="button">
+            {t.pasteDocument as string}
           </button>
-        </form>
+        </section>
 
-        <form className="card stack upload-card" onSubmit={handleUploadDocument}>
-          <div>
+        <form className="card action-card upload-card" onSubmit={handleUploadDocument}>
+          <div className="action-card-copy">
             <p className="eyebrow">{t.uploadLocal as string}</p>
             <h2>{t.addFile as string}</h2>
             <p className="muted">{t.addFileHelp as string}</p>
+            {selectedFile && <p className="selected-file-meta">{selectedFile.name}</p>}
           </div>
-          <label className="upload-dropzone">
-            <span>{selectedFile ? selectedFile.name : (t.chooseLocalFile as string)}</span>
-            <small>
-              {selectedFile
-                ? (t.fileReady as (kb: number) => string)(Math.ceil(selectedFile.size / 1024))
-                : (t.fileHint as string)}
-            </small>
-            <input
-              type="file"
-              accept=".txt,.md,.markdown,.pdf"
-              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-            />
-          </label>
-          <p className="muted">{t.pdfBoundary as string}</p>
-          <button disabled={isLoading || !selectedFile}>{t.addFileToBase as string}</button>
+          {selectedFile ? (
+            <button className="action-button" disabled={isLoading} type="submit">
+              {t.addFileToBase as string}
+            </button>
+          ) : (
+            <label className="action-button file-action-button">
+              {t.chooseLocalFile as string}
+              <input
+                type="file"
+                accept=".txt,.md,.markdown,.pdf"
+                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              />
+            </label>
+          )}
         </form>
       </section>
 
-      <section className="grid two-columns workspace-grid">
-        <section className="card stack base-card">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">{t.localBase as string}</p>
-              <h2>{t.indexedDocs as string}</h2>
+      <section className="grid workspace-grid">
+        <details className="card stack base-card toggle-card">
+          <summary className="toggle-summary">
+            <span>
+              <span className="eyebrow">{t.localBase as string}</span>
+              <strong>{t.indexedDocs as string}</strong>
+            </span>
+            <span className="summary-pill">{documents.length}</span>
+          </summary>
+
+          <div className="stack toggle-content">
+            <div className="metric-grid">
+              <div>
+                <span>{t.documents as string}</span>
+                <strong>{documents.length}</strong>
+              </div>
+              <div>
+                <span>{t.chunks as string}</span>
+                <strong>{totalChunks}</strong>
+              </div>
+              <div>
+                <span>{t.characters as string}</span>
+                <strong>{totalCharacters.toLocaleString(language === 'pt' ? 'pt-BR' : 'en-US')}</strong>
+              </div>
             </div>
-            <strong>{documents.length}</strong>
+
+            {!hasDocuments && (
+              <div className="empty-state">
+                <strong>{t.emptyTitle as string}</strong>
+                <p>{t.emptyText as string}</p>
+              </div>
+            )}
+
+            <div className="document-list document-list-scroll">
+              {documents.map((document) => (
+                <article className="document-item" key={document.id}>
+                  <div>
+                    <h3>{document.title}</h3>
+                    <p>
+                      {document.total_chunks} chunks · {document.total_chars} chars ·{' '}
+                      {document.source_type}
+                    </p>
+                  </div>
+                  <button
+                    className="secondary"
+                    onClick={() => void handleDeleteDocument(document.id)}
+                    type="button"
+                  >
+                    {t.removeFromBase as string}
+                  </button>
+                </article>
+              ))}
+            </div>
           </div>
+        </details>
 
-          <div className="metric-grid">
-            <div>
-              <span>{t.documents as string}</span>
-              <strong>{documents.length}</strong>
-            </div>
-            <div>
-              <span>{t.chunks as string}</span>
-              <strong>{totalChunks}</strong>
-            </div>
-            <div>
-              <span>{t.characters as string}</span>
-              <strong>{totalCharacters.toLocaleString(language === 'pt' ? 'pt-BR' : 'en-US')}</strong>
-            </div>
-          </div>
-
-          {!hasDocuments && (
-            <div className="empty-state">
-              <strong>{t.emptyTitle as string}</strong>
-              <p>{t.emptyText as string}</p>
-            </div>
-          )}
-
-          <div className="document-list">
-            {documents.map((document) => (
-              <article className="document-item" key={document.id}>
-                <div>
-                  <h3>{document.title}</h3>
-                  <p>
-                    {document.total_chunks} chunks · {document.total_chars} chars ·{' '}
-                    {document.source_type}
-                  </p>
-                </div>
-                <button
-                  className="secondary"
-                  onClick={() => void handleDeleteDocument(document.id)}
-                  type="button"
-                >
-                  {t.removeFromBase as string}
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="card stack chat-card">
+        <section className="card stack chat-card primary-chat-card">
           <div className="chat-heading">
             <div>
               <p className="eyebrow">{t.chatRag as string}</p>
@@ -688,6 +750,46 @@ function App() {
           <p className="muted">{t.apiWaiting as string}</p>
         )}
       </section>
+
+      {isPasteModalOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="card stack modal-card" role="dialog" aria-modal="true">
+            <div className="chat-heading">
+              <div>
+                <p className="eyebrow">{t.quickEntry as string}</p>
+                <h2>{t.pasteModalTitle as string}</h2>
+              </div>
+              <button className="ghost" onClick={() => setIsPasteModalOpen(false)} type="button">
+                {t.cancel as string}
+              </button>
+            </div>
+            <form className="stack" onSubmit={handleCreateDocument}>
+              <label>
+                {t.title as string}
+                <input value={title} onChange={(event) => setTitle(event.target.value)} />
+              </label>
+              <label>
+                {t.content as string}
+                <textarea
+                  autoFocus
+                  placeholder={t.contentPlaceholder as string}
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                  rows={14}
+                />
+              </label>
+              <div className="modal-actions">
+                <button className="secondary" onClick={() => setIsPasteModalOpen(false)} type="button">
+                  {t.cancel as string}
+                </button>
+                <button disabled={isLoading || title.trim().length === 0 || content.trim().length < 10}>
+                  {t.addToBase as string}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </main>
   )
 }
