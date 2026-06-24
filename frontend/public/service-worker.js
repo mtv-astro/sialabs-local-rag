@@ -1,5 +1,6 @@
-const CACHE_NAME = 'sialabs-local-rag-shell-v1'
-const SHELL_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/maskable-icon.svg']
+const CACHE_NAME = 'sialabs-local-rag-shell-v2'
+const SHELL_ASSETS = ['/manifest.webmanifest', '/icon.svg', '/maskable-icon.svg']
+const NEVER_CACHE_PATHS = ['/service-worker.js']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -32,6 +33,14 @@ self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(request.url)
   if (requestUrl.origin !== self.location.origin) return
   if (requestUrl.pathname.startsWith('/api/')) return
+  if (NEVER_CACHE_PATHS.includes(requestUrl.pathname)) return
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => caches.match('/index.html')),
+    )
+    return
+  }
 
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
