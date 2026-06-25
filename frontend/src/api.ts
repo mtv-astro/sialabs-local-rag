@@ -109,11 +109,12 @@ export async function deleteDocument(documentId: string): Promise<void> {
 export async function askQuestion(
   question: string,
   runtimeOptions?: RuntimeOptions,
+  topK?: number,
 ): Promise<ChatResponse> {
   const response = await fetchApi(`${API_URL}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, runtime_options: runtimeOptions }),
+    body: JSON.stringify({ question, runtime_options: runtimeOptions, top_k: topK }),
   })
   return parseJsonResponse<ChatResponse>(response)
 }
