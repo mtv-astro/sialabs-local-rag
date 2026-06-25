@@ -1,6 +1,7 @@
 param(
   [int]$LauncherPort = 8765,
   [int]$FrontendPort = 4182,
+  [int]$OllamaContextTokens = 2048,
   [switch]$NoBackend,
   [switch]$NoOpen
 )
@@ -15,6 +16,16 @@ $LauncherUrl = "http://127.0.0.1:$LauncherPort"
 $BackendUrl = "http://127.0.0.1:8000"
 $BackendConfigUrl = "$BackendUrl/api/config"
 $FrontendUrl = "http://127.0.0.1:$FrontendPort"
+
+if (-not $env:OLLAMA_NUM_CTX) {
+  $env:OLLAMA_NUM_CTX = $OllamaContextTokens.ToString()
+}
+if (-not $env:OLLAMA_TEMPERATURE) {
+  $env:OLLAMA_TEMPERATURE = "0.2"
+}
+if (-not $env:OLLAMA_KEEP_ALIVE) {
+  $env:OLLAMA_KEEP_ALIVE = "5m"
+}
 
 function Convert-ToPowerShellLiteral {
   param([string]$Value)
@@ -162,3 +173,4 @@ if (-not $NoOpen) {
 Write-Host "SIALabs Local RAG is running at $FrontendUrl"
 Write-Host "Launcher is running at $LauncherUrl"
 Write-Host "Backend is running at $BackendUrl"
+Write-Host "Ollama context tokens: $env:OLLAMA_NUM_CTX"
