@@ -12,7 +12,14 @@ $FrontendDir = Join-Path $RepoRoot "frontend"
 $FrontendDist = Join-Path $FrontendDir "dist"
 $LauncherScript = Join-Path $PSScriptRoot "start-launcher.ps1"
 $LauncherUrl = "http://127.0.0.1:$LauncherPort"
+$BackendUrl = "http://127.0.0.1:8000"
+$BackendConfigUrl = "$BackendUrl/api/config"
 $FrontendUrl = "http://127.0.0.1:$FrontendPort"
+
+function Convert-ToPowerShellLiteral {
+  param([string]$Value)
+  return "'" + $Value.Replace("'", "''") + "'"
+}
 
 function Test-HttpReachable {
   param([string]$Url)
@@ -59,9 +66,17 @@ function Start-LauncherProcess {
 
   Start-Process `
     -FilePath "powershell.exe" `
-    -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $LauncherScript) `
+    -ArgumentList @(
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-WindowStyle",
+      "Hidden",
+      "-File",
+      $LauncherScript
+    ) `
     -WorkingDirectory $RepoRoot `
-    -WindowStyle Minimized
+    -WindowStyle Hidden
 
   if (-not (Wait-HttpReachable -Url "$LauncherUrl/health" -TimeoutSeconds 30)) {
     throw "Launcher did not become reachable at $LauncherUrl."
@@ -96,12 +111,23 @@ function Start-FrontendProcess {
 
   Build-FrontendIfNeeded
   $python = Get-PythonCommand
+  $frontendDistLiteral = Convert-ToPowerShellLiteral -Value $FrontendDist
+  $pythonLiteral = Convert-ToPowerShellLiteral -Value $python
+  $frontendCommand = "Set-Location -LiteralPath $frontendDistLiteral; & $pythonLiteral -m http.server $FrontendPort --bind 127.0.0.1"
 
   Start-Process `
-    -FilePath $python `
-    -ArgumentList @("-m", "http.server", $FrontendPort.ToString(), "--bind", "127.0.0.1") `
+    -FilePath "powershell.exe" `
+    -ArgumentList @(
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-WindowStyle",
+      "Hidden",
+      "-Command",
+      $frontendCommand
+    ) `
     -WorkingDirectory $FrontendDist `
-    -WindowStyle Minimized
+    -WindowStyle Hidden
 
   if (-not (Wait-HttpReachable -Url $FrontendUrl -TimeoutSeconds 20)) {
     throw "Frontend did not become reachable at $FrontendUrl."
@@ -118,12 +144,16 @@ function Start-BackendThroughLauncher {
     -Method Post `
     -ContentType "application/json" `
     -Body "{}" | Out-Null
+
+  if (-not (Wait-HttpReachable -Url $BackendConfigUrl -TimeoutSeconds 45)) {
+    throw "Backend did not become reachable at $BackendConfigUrl."
+  }
 }
 
 Set-Location $RepoRoot
 Start-LauncherProcess
-Start-FrontendProcess
 Start-BackendThroughLauncher
+Start-FrontendProcess
 
 if (-not $NoOpen) {
   Start-Process $FrontendUrl
@@ -131,3 +161,4 @@ if (-not $NoOpen) {
 
 Write-Host "SIALabs Local RAG is running at $FrontendUrl"
 Write-Host "Launcher is running at $LauncherUrl"
+Write-Host "Backend is running at $BackendUrl"
